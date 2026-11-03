@@ -1,0 +1,767 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Alert Dog · 血糖警报犬 · Cadence</title>
+<style>
+  @property --spin { syntax: "<angle>"; inherits: false; initial-value: 0deg; }
+  :root { --bg:#04070d; --panel:rgba(14,20,32,.66); --line:rgba(120,160,255,.14); --text:#e8f0fb; --dim:#8a97ab;
+          --cyan:#4de1ff; --violet:#8b7bff; --low:#ff5d5d; --severe:#ff2d55; --alert:#ffb020; --treat:#4cc9f0;
+          --bolus:#7aa2ff; --exercise:#c77dff; --meal:#9aa5b1; --mono:"SF Mono", Menlo, Consolas, monospace; }
+  * { box-sizing: border-box; }
+  html { background:var(--bg); }
+  body { margin:0; color:var(--text); font:14px/1.55 -apple-system, "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+         background:
+           radial-gradient(1200px 600px at 12% -10%, rgba(77,225,255,.10), transparent 60%),
+           radial-gradient(900px 600px at 95% 5%, rgba(139,123,255,.12), transparent 60%),
+           radial-gradient(1000px 700px at 50% 120%, rgba(77,225,255,.06), transparent 60%); min-height:100vh; }
+  body::before { content:""; position:fixed; inset:0; pointer-events:none; z-index:0;
+         background-image: linear-gradient(rgba(120,160,255,.045) 1px, transparent 1px), linear-gradient(90deg, rgba(120,160,255,.045) 1px, transparent 1px);
+         background-size: 44px 44px; mask-image: radial-gradient(ellipse at 50% 30%, #000 20%, transparent 75%); }
+  #bg { position:fixed; inset:0; width:100vw; height:100vh; z-index:0; pointer-events:none; }
+  .wrap { position:relative; z-index:1; }
+
+  header { padding:14px 24px 10px; display:flex; gap:18px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+  .kicker { font:600 10px/1 var(--mono); letter-spacing:3px; color:var(--cyan); opacity:.85; text-transform:uppercase; }
+  h1 { margin:6px 0 0; font-size:26px; letter-spacing:1px; font-weight:800;
+       background:linear-gradient(100deg, #ffffff 0%, var(--cyan) 35%, var(--violet) 65%, #ffffff 100%); background-size:220% 100%;
+       -webkit-background-clip:text; background-clip:text; color:transparent; animation:shine 9s linear infinite;
+       filter: drop-shadow(0 0 18px rgba(77,225,255,.25)); }
+  @keyframes shine { to { background-position:-220% 0; } }
+  h1 small { font-size:13px; font-weight:400; letter-spacing:.5px; color:var(--dim); -webkit-text-fill-color:var(--dim); margin-left:12px; filter:none; }
+  .meta { display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center; margin-top:8px; font-size:12px; }
+  .warn { padding:2px 9px; border:1px solid rgba(240,198,116,.35); background:rgba(240,198,116,.07); color:#f0c674; border-radius:4px; font-size:11.5px; }
+  details.about summary { cursor:pointer; color:var(--cyan); list-style:none; }
+  details.about summary::-webkit-details-marker { display:none; }
+  details.about summary::before { content:"▸ "; } details.about[open] summary::before { content:"▾ "; }
+  details.about p { color:#a9b5c7; max-width:1000px; margin:6px 0 0; font-size:13px; }
+  .hud { display:flex; flex-wrap:wrap; gap:6px 16px; padding:9px 14px; border:1px solid var(--line); border-radius:10px;
+         background:var(--panel); backdrop-filter:blur(12px); font:11.5px/1.4 var(--mono); color:var(--dim); position:relative; overflow:hidden; }
+  .hud span b { margin-left:6px; }
+  .hud::after { content:""; position:absolute; left:0; right:0; height:40%; top:-40%; background:linear-gradient(transparent, rgba(77,225,255,.10), transparent); animation:scan 4s linear infinite; }
+  @keyframes scan { to { top:140%; } }
+  .hud b { color:var(--text); font-weight:600; }
+  .live { color:#7dffb2; } .live i { display:inline-block; width:7px; height:7px; border-radius:50%; background:#3dff8f; margin-right:6px; box-shadow:0 0 10px #3dff8f; animation:blink 1.4s ease-in-out infinite; vertical-align:1px; }
+  @keyframes blink { 50% { opacity:.25; } }
+
+  .bar { display:flex; flex-wrap:wrap; gap:8px 16px; align-items:center; padding:8px 24px; border-top:1px solid var(--line); border-bottom:1px solid var(--line);
+         background:rgba(6,10,18,.78); backdrop-filter:blur(14px); position:sticky; top:0; z-index:5; }
+  .clock { font:600 17px/1 var(--mono); min-width:200px; color:#fff; text-shadow:0 0 12px rgba(77,225,255,.45); }
+  .clock .night { color:#9db4ff; font-size:12px; margin-left:8px; text-shadow:none; font-family:inherit; }
+  .group { display:flex; gap:6px; align-items:center; }
+  .group span { color:var(--dim); font-size:12px; margin-right:2px; }
+  button { background:rgba(30,42,62,.55); color:var(--text); border:1px solid rgba(120,160,255,.22); border-radius:8px; padding:5px 10px; cursor:pointer; font:inherit; font-size:12.5px;
+           transition:all .18s ease; }
+  button:hover { border-color:var(--cyan); box-shadow:0 0 14px rgba(77,225,255,.25), inset 0 0 10px rgba(77,225,255,.08); transform:translateY(-1px); }
+  button:active { transform:translateY(0); }
+  button.on { background:rgba(77,225,255,.14); border-color:var(--cyan); box-shadow:0 0 16px rgba(77,225,255,.3); }
+  button.danger { border-color:rgba(255,93,93,.45); }
+  button.danger:hover { border-color:var(--low); box-shadow:0 0 14px rgba(255,93,93,.35); }
+  .body { padding:2px 9px; border-radius:20px; font-size:12px; }
+  .body.changed { background:rgba(255,45,85,.15); color:#ff9db0; border:1px solid rgba(255,45,85,.4); box-shadow:0 0 12px rgba(255,45,85,.25); }
+  .body.normal { background:rgba(61,255,143,.08); color:#8fe0b0; border:1px solid rgba(61,255,143,.25); }
+
+  main { padding:14px 24px 40px; display:grid; gap:14px; }
+  .dash { display:grid; grid-template-columns:minmax(0, 1.4fr) minmax(340px, 1fr); gap:14px; align-items:start; }
+  .compare { display:grid; gap:10px; min-width:0; }
+  .brainpanel { position:sticky; top:calc(var(--barH, 56px) + 12px); min-width:0; }
+  .glass { background:var(--panel); border:1px solid var(--line); border-radius:14px; backdrop-filter:blur(12px);
+           box-shadow:0 10px 40px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04); }
+  .house { padding:10px 12px 9px; overflow:hidden; position:relative; }
+  .house.dog, .core { position:relative; }
+  .hhead { display:flex; align-items:baseline; gap:10px; padding:0 4px; }
+  .hhead h2 { margin:0; font-size:14px; letter-spacing:.3px; white-space:nowrap; }
+  .house.dog .hhead h2 { color:#cfeaff; text-shadow:0 0 14px rgba(77,225,255,.5); }
+  .hhead .tag { flex:1; min-width:0; font-size:11px; color:var(--dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .house canvas.chartc { height:140px; margin-top:2px; }
+  .chips { display:flex; flex-wrap:wrap; gap:3px 14px; font-size:11.5px; color:var(--dim); padding:2px 4px 0; }
+  .chips span { cursor:help; }
+  .chips b { font:600 12px var(--mono); color:var(--text); margin-left:5px; }
+  .chips b.bad { color:var(--low); text-shadow:0 0 10px rgba(255,93,93,.5); }
+  .house.dog::before, .core::before { content:""; position:absolute; inset:0; border-radius:14px; padding:1px; z-index:2; pointer-events:none;
+      background:conic-gradient(from var(--spin), transparent 0 20%, var(--cyan) 30%, transparent 40% 70%, var(--violet) 80%, transparent 90%);
+      -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite:xor; mask-composite:exclude;
+      animation:spin 8s linear infinite; opacity:.85; }
+  .hot::before { background:conic-gradient(from var(--spin), transparent 0 15%, var(--alert) 30%, transparent 45% 65%, #ff6a3d 80%, transparent 95%) !important; animation-duration:2.6s !important; }
+  @keyframes spin { to { --spin:360deg; } }
+  canvas { width:100%; display:block; }
+  .now { font:700 22px/1 var(--mono); white-space:nowrap; }
+  .now small { font:11px var(--mono); color:var(--dim); }
+  .now.low { color:var(--low); text-shadow:0 0 16px rgba(255,93,93,.6); } .now.severe { color:var(--severe); text-shadow:0 0 20px rgba(255,45,85,.8); animation:blink .8s infinite; }
+  .stats { display:grid; grid-template-columns:1fr auto; gap:2px 10px; font-size:12.5px; }
+  .stats div:nth-child(odd) { color:var(--dim); }
+  .stats div:nth-child(even) { text-align:right; font-family:var(--mono); font-size:12px; }
+  .mode { display:inline-block; padding:3px 12px; border-radius:20px; font-size:12px; font-weight:600; letter-spacing:.5px; }
+  .mode.routine { background:rgba(61,255,143,.10); color:#8fe0b0; border:1px solid rgba(61,255,143,.3); }
+  .mode.aroused { background:rgba(255,176,32,.12); color:#ffc46b; border:1px solid rgba(255,176,32,.45); box-shadow:0 0 14px rgba(255,176,32,.3); }
+  .mode.alerting { background:rgba(255,93,93,.15); color:#ffb3b3; border:1px solid rgba(255,93,93,.55); box-shadow:0 0 18px rgba(255,93,93,.45); animation:blink 1s infinite; }
+  .motor { display:grid; grid-template-columns:44px 1fr 46px; gap:4px; align-items:center; font-size:12px; color:var(--dim); }
+  .motor .track { height:7px; background:rgba(255,255,255,.06); border-radius:4px; overflow:hidden; }
+  .motor .fill { height:100%; background:linear-gradient(90deg, #2f7dff, var(--cyan)); box-shadow:0 0 10px var(--cyan); transition:width .25s; }
+  .motor .fill.alert { background:linear-gradient(90deg, #ff6a3d, var(--alert)); box-shadow:0 0 10px var(--alert); }
+  .motor div:last-child { font-family:var(--mono); text-align:right; }
+  canvas.spark { height:46px; }
+  .legend { display:flex; flex-wrap:wrap; gap:4px 14px; color:var(--dim); font-size:11.5px; padding:0 4px; }
+  .legend i { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:5px; vertical-align:-1px; }
+
+  .core { overflow:hidden; }
+  .core .top { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:12px 14px 0; }
+  .core h2 { margin:0; font-size:14px; color:#cfeaff; text-shadow:0 0 14px rgba(77,225,255,.5); }
+  .core h2 small { display:block; font:10px var(--mono); color:var(--dim); letter-spacing:2px; text-shadow:none; margin-top:2px; }
+  .core canvas.net { height:330px; }
+  .core .status { display:grid; grid-template-columns:1fr 1fr; gap:8px 18px; padding:10px 14px 12px; border-top:1px solid var(--line); }
+  .core .status > div { display:grid; gap:6px; align-content:start; }
+  .core details { padding:0 14px 12px; }
+  .core details summary { cursor:pointer; color:var(--cyan); font-size:12px; }
+  .core details[open] { display:grid; gap:8px; }
+  .big { font:700 22px/1 var(--mono); color:#fff; text-shadow:0 0 14px rgba(77,225,255,.5); }
+  .big small { font-size:11px; color:var(--dim); text-shadow:none; }
+  .label { color:var(--dim); font-size:11.5px; }
+  .keys { display:grid; grid-template-columns:auto 1fr; gap:4px 8px; font-size:12px; color:var(--dim); align-items:center; }
+  .keys i { width:9px; height:9px; border-radius:50%; display:inline-block; box-shadow:0 0 8px currentColor; }
+  .fine { font-size:11.5px; color:#7d8aa0; line-height:1.55; margin:0; }
+
+  section.card { padding:14px 18px; }
+  section.card h3 { margin:0 0 8px; font-size:15px; letter-spacing:.3px; }
+  section.card h3::before { content:""; display:inline-block; width:3px; height:13px; margin-right:8px; vertical-align:-1px; background:linear-gradient(var(--cyan), var(--violet)); box-shadow:0 0 8px var(--cyan); }
+  table { border-collapse:collapse; width:100%; font-size:12.5px; }
+  th, td { padding:6px 8px; border-bottom:1px solid var(--line); text-align:right; }
+  td { font-family:var(--mono); font-size:12px; }
+  th:first-child, td:first-child { text-align:left; font-family:inherit; font-size:12.5px; }
+  th { color:var(--dim); font-weight:500; }
+  tr.dog td { color:#bfeaff; font-weight:600; background:rgba(77,225,255,.06); }
+  tr.dog td:first-child { box-shadow:inset 3px 0 0 var(--cyan); }
+  .two { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  .log { font-size:12.5px; color:var(--dim); max-height:130px; overflow:auto; }
+  .log b { color:var(--cyan); font-weight:500; font-family:var(--mono); font-size:11.5px; }
+  p.note { color:var(--dim); margin:6px 0; max-width:1100px; }
+  @media (max-width: 980px) { .dash { grid-template-columns:1fr; } .brainpanel { position:static; } }
+  @media (max-width: 1400px) { .hud { display:none; } }
+  @media (max-width: 1280px) { .group > span { display:none; } .clock { min-width:0; } }
+  @media (max-height: 920px) and (min-width: 981px) { .core canvas.net { height:270px; } .house canvas.chartc { height:122px; } }
+  @media (max-width: 760px) { .two { grid-template-columns:1fr; } .core .status { grid-template-columns:1fr; } h1 small { display:block; margin:4px 0 0; }
+                              .group > span { display:none; } .bar { padding:8px 14px; } main, header { padding-left:14px; padding-right:14px; } }
+  @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation:none !important; } }
+</style>
+</head>
+<body>
+<canvas id="bg"></canvas>
+<div class="wrap">
+<header>
+  <div>
+    <div class="kicker">Cadence · living brain demo</div>
+    <h1>Alert Dog · 血糖警报犬<small>一个 Cadence 大脑，陪一位 1 型糖尿病虚拟患者生活</small></h1>
+    <div class="meta">
+      <span class="warn">研究演示 · 虚拟患者（UVA/Padova 模型，simglucose 实现）· 不是医疗器械</span>
+      <details class="about"><summary>这是什么？</summary>
+        <p>真实世界里有经过训练、能提前察觉主人低血糖的警报犬。这里的"狗"是一个持续运行的 Cadence 大脑：先在犬舍里跟训练师（血糖仪的趋势报警规则）学了 60 天，见过 10 位别的虚拟患者；现在被分配到一位它从没见过的患者家里。每 5 分钟它决定一次"不出声"还是"提醒：要低了"。提醒后患者会查看血糖，需要的话吃 15 克糖。平静时它只按已学会的做，不学习；结果出乎意料时它才醒过来，在局部修正自己。</p>
+      </details>
+    </div>
+  </div>
+  <div class="hud">
+    <span class="live"><i></i>LIVE</span><span id="hud-mode">—</span>
+    <span>PATIENT<b id="hud-patient">—</b></span>
+    <span>NEURONS<b id="hud-neurons">—</b></span>
+    <span>SYNAPSES<b id="hud-synapses">—</b></span>
+    <span>AGE<b id="hud-age">—</b></span>
+  </div>
+</header>
+
+<div class="bar">
+  <div class="clock" id="clock">—</div>
+  <div class="group"><span>速度</span>
+    <button data-act="slow">慢</button><button data-act="normal">正常</button><button data-act="fast">快</button><button data-act="faster">很快</button>
+    <button data-act="pause" id="pause">暂停</button>
+  </div>
+  <div class="group"><span>给患者制造状况</span>
+    <button data-act="bolus" class="danger" title="多打一针（相当于 50 克饭的量，但没吃饭）">多打一针胰岛素</button>
+    <button data-act="exercise" title="现在运动 50 分钟；运动后几小时对胰岛素更敏感">去运动</button>
+    <button data-act="meal" title="加一顿 60 克的饭，并按量打针">加一顿饭</button>
+  </div>
+  <div class="group"><span>身体</span>
+    <button data-act="sensitive" title="胰岛素敏感性 +30%：同样的剂量，血糖掉得更多">变得对胰岛素更敏感</button>
+    <button data-act="restore">恢复原样</button>
+    <span class="body normal" id="body">正常</span>
+  </div>
+</div>
+
+<main>
+  <div class="dash">
+  <div class="compare">
+  <div class="legend">
+    <span><i style="background:rgba(47,191,113,.25)"></i>目标范围 70–180</span>
+    <span><i style="background:rgba(255,93,93,.35)"></i>低血糖 &lt;70</span>
+    <span><i style="background:rgba(255,45,85,.6)"></i>严重 &lt;54</span>
+    <span><i style="background:var(--alert)"></i>▲ 提醒</span>
+    <span><i style="background:transparent;border:1.5px solid var(--alert)"></i>△ 提醒了但不需要吃糖</span>
+    <span><i style="background:var(--treat)"></i>● 吃糖处理</span>
+    <span><i style="background:var(--meal)"></i>▪ 吃饭</span>
+    <span><i style="background:var(--bolus)"></i>| 打针</span>
+    <span><i style="background:var(--exercise)"></i>运动</span>
+  </div>
+  <div id="houses" class="compare"></div>
+  </div>
+
+  <aside class="brainpanel">
+    <section class="core glass" id="core">
+      <div class="top">
+        <h2>警报犬的大脑 · 实时<small>NEURAL CORE · LIVE ACTIVATION</small></h2>
+        <span class="mode routine" id="core-mode">—</span>
+      </div>
+      <canvas class="net"></canvas>
+      <div class="status">
+        <div>
+          <div><span class="big" id="core-active">—</span> <span class="label">这一刻明显激活的神经元</span></div>
+          <div class="label" id="core-plastic" style="color:#ffd678">等待第一次读取突触强度…</div>
+          <div class="motor"><div>不出声</div><div class="track"><div class="fill q"></div></div><div class="vq"></div></div>
+          <div class="motor"><div>提醒</div><div class="track"><div class="fill alert a"></div></div><div class="va"></div></div>
+          <div class="label">唤醒水平（过去 24 小时，虚线为阈值 0.2）</div>
+          <canvas class="spark"></canvas>
+        </div>
+        <div class="stats brainstats"></div>
+      </div>
+      <details>
+        <summary>这些粒子是什么？</summary>
+        <div class="keys">
+          <i style="color:#4de1ff;background:#4de1ff"></i><span>感觉 36：血糖、趋势、时刻、胰岛素、碳水、运动、睡眠、刚吃糖</span>
+          <i style="color:#8b7bff;background:#8b7bff"></i><span>联想区 48</span>
+          <i style="color:#c9a7ff;background:#c9a7ff"></i><span>前额区 48</span>
+          <i style="color:#ffb020;background:#ffb020"></i><span>运动 2：不出声 / 提醒</span>
+          <i style="color:#ffd678;background:#ffd678"></i><span>金色生长的线：刚被学习加强的突触；玫红：被减弱的</span>
+        </div>
+        <p class="fine"><b>真实的数据：</b>每个光点是警报犬大脑里的一个神经元，亮度是它这一刻实际的激活（每个区按自己的最大值归一）。连线是它 <span id="core-syn">—</span> 条突触里最强的 700 条，粗细和亮度来自每条突触此刻真实的强度。每秒读一次全部突触强度，和上一秒相比真的变了的，最多挑 40 条变化最大的，画成沿线"生长"的金色（变强）或玫红（变弱）光丝；平静时它不学习，就不会有这种光丝。</p>
+        <p class="fine"><b>只为好看的部分：</b>神经元按脑区从左到右排开，联想区和前额区画成两团缓慢旋转的星云；最强的突触会把两端轻轻拉近，学习时漂动更剧烈。所以网络一直在变形，但位置本身没有含义。沿线流动的小光点从激活的神经元出发，只示意信号去向，不是逐条算出的消息。页面背景的漂浮粒子纯属装饰。</p>
+      </details>
+    </section>
+  </aside>
+  </div>
+
+  <div class="two">
+    <section class="card glass">
+      <h3>刚才发生了什么</h3>
+      <div class="log" id="log"><i>还没有人为干预。上面的按钮会同时作用于三个家庭。</i></div>
+    </section>
+    <section class="card glass">
+      <h3>怎么看</h3>
+      <p class="note">三个家庭是同一位患者、同一套随机日常（同一个种子）。唯一的区别是陪伴者：Cadence 警报犬、血糖仪趋势规则（也是警报犬的训练师）、没有任何提醒。提醒会改变患者的这一天，所以三条曲线会在第一次提醒之后分开。</p>
+      <p class="note">大脑状态里，<b>平静</b>表示这一刻只做了一次"稳定下来"的计算，什么都没学；<b>警觉</b>表示结果出乎它的预料（或刚到新家的第一天），这一刻它在采样、学习、写记忆。</p>
+    </section>
+  </div>
+
+  <section class="card glass">
+    <h3>正式测量：同样的 49 天生活跑 10 遍（种子 10–19，开发时没用过）</h3>
+    <div id="evidence"><i>还没有测量结果。运行 <code>python evaluate.py</code> 生成。</i></div>
+    <p class="note">结论：警报犬让一位它没见过的患者避开了大部分低血糖（和"没有提醒"比）；没进犬舍的狗差很多。
+      但它<b>没有超过它的训练师</b>：趋势规则的低血糖更少、提醒也少得多，警报犬约三分之二的提醒其实不需要吃糖。
+      到家后继续学习，平均比"不再学习"的同一只狗好，但逐段生活看有好有坏，差距主要来自其中一段生活，不能说它稳定地更好。</p>
+    <p class="note" id="evidence-note"></p>
+  </section>
+</main>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const NAMES = { dog: "Cadence 警报犬", rule: "血糖仪趋势规则（训练师）", none: "没有提醒" };
+const TAGS = { dog: "Brain.compose + Brain.live · 一直活着，意外时才学", rule: "对照：读数 <75，或按 15 分钟趋势推算 20 分钟后 <70 就报警", none: "对照：只靠患者自己感觉（清醒 <60、睡着 <45 才察觉）" };
+const MODE = { routine: ["平静", "routine"], aroused: ["警觉 · 在学习", "aroused"], refused: ["没有稳定下来", "aroused"] };
+const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
+let built = false, latest = null, graph = null;
+
+function clock(min) {
+  const d = Math.floor(min / 1440), c = min % 1440;
+  return `第 ${d + 1} 天 ${String(Math.floor(c / 60)).padStart(2, "0")}:${String(c % 60).padStart(2, "0")}`;
+}
+
+function build(state) {
+  const box = $("#houses");
+  for (const h of state.houses) {
+    const el = document.createElement("div");
+    el.className = "house glass " + h.key; el.id = "h-" + h.key;
+    el.innerHTML = `
+      <div class="hhead"><h2>${NAMES[h.key]}</h2><span class="tag" title="${TAGS[h.key]}">${TAGS[h.key]}</span><span class="now">—</span></div>
+      <canvas class="chartc"></canvas>
+      <div class="chips"></div>`;
+    box.appendChild(el);
+  }
+  built = true;
+}
+
+function chips(el, rows) { el.innerHTML = rows.map(([k, v, bad, tip]) => `<span title="${tip}">${k}<b class="${bad ? "bad" : ""}">${v}</b></span>`).join(""); }
+
+function fit(canvas) {
+  const r = canvas.getBoundingClientRect(), dpr = devicePixelRatio || 1;
+  if (canvas.width !== Math.round(r.width * dpr) || canvas.height !== Math.round(r.height * dpr)) {
+    canvas.width = Math.round(r.width * dpr); canvas.height = Math.round(r.height * dpr);
+  }
+  const g = canvas.getContext("2d"); g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return [g, r.width, r.height];
+}
+
+function chart(canvas, h, now, t) {
+  const [g, W, H] = fit(canvas);
+  const L = 34, R = 10, T = 16, B = 18, lo = 40, hi = 300;
+  const t0 = now - 1440, x = m => L + (m - t0) / 1440 * (W - L - R);
+  const y = v => T + (1 - (Math.min(hi, Math.max(lo, v)) - lo) / (hi - lo)) * (H - T - B);
+  g.clearRect(0, 0, W, H);
+  const band = (a, b, c1, c2) => { const gr = g.createLinearGradient(L, 0, W - R, 0); gr.addColorStop(0, c1); gr.addColorStop(1, c2); g.fillStyle = gr; g.fillRect(L, y(a), W - L - R, y(b) - y(a)); };
+  band(180, 70, "rgba(47,191,113,.04)", "rgba(47,191,113,.12)");
+  band(70, 54, "rgba(255,93,93,.06)", "rgba(255,93,93,.16)");
+  band(54, lo, "rgba(255,45,85,.12)", "rgba(255,45,85,.28)");
+  for (let d = Math.floor(t0 / 1440) - 1; d <= Math.floor(now / 1440) + 1; d++) {
+    const a = Math.max(t0, d * 1440 - 60), b = Math.min(now, d * 1440 + 420);
+    if (b > a) { g.fillStyle = "rgba(90,110,220,.08)"; g.fillRect(x(a), T, x(b) - x(a), H - T - B); }
+  }
+  g.strokeStyle = "rgba(120,160,255,.10)"; g.fillStyle = "#5f6d82"; g.font = "10px Menlo, Consolas, monospace"; g.lineWidth = 1;
+  for (const v of [54, 70, 180, 250]) { g.beginPath(); g.moveTo(L, y(v)); g.lineTo(W - R, y(v)); g.stroke(); g.fillText(v, 6, y(v) + 3); }
+  for (let m = Math.ceil(t0 / 360) * 360; m <= now; m += 360) {
+    const c = ((m % 1440) + 1440) % 1440 / 60; g.fillText(String(c).padStart(2, "0") + ":00", x(m) - 14, H - 4);
+  }
+  const marks = h.marks.filter(([m]) => m >= t0);
+  for (const [m, k] of marks) if (k === "exercise") { g.fillStyle = "rgba(199,125,255,.16)"; g.fillRect(x(m), T, x(m + 50) - x(m), H - T - B); }
+  const pts = h.glucose.filter(([m]) => m >= t0);
+  if (pts.length > 1) {
+    const area = g.createLinearGradient(0, T, 0, H - B);
+    area.addColorStop(0, "rgba(77,225,255,.20)"); area.addColorStop(1, "rgba(77,225,255,0)");
+    g.beginPath(); pts.forEach(([m, v], i) => { i ? g.lineTo(x(m), y(v)) : g.moveTo(x(m), y(v)); });
+    g.lineTo(x(pts[pts.length - 1][0]), H - B); g.lineTo(x(pts[0][0]), H - B); g.closePath(); g.fillStyle = area; g.fill();
+    const stroke = g.createLinearGradient(0, y(260), 0, y(45));
+    const at = v => (y(v) - y(260)) / (y(45) - y(260));
+    stroke.addColorStop(0, "#c9a7ff"); stroke.addColorStop(at(180), "#bfefff"); stroke.addColorStop(at(100), "#4de1ff");
+    stroke.addColorStop(at(72), "#4de1ff"); stroke.addColorStop(at(68), "#ff5d5d"); stroke.addColorStop(1, "#ff2d55");
+    g.save(); g.lineWidth = 2.2; g.lineJoin = "round"; g.strokeStyle = stroke; g.shadowColor = "rgba(77,225,255,.8)"; g.shadowBlur = 10;
+    g.beginPath(); pts.forEach(([m, v], i) => { i ? g.lineTo(x(m), y(v)) : g.moveTo(x(m), y(v)); }); g.stroke(); g.restore();
+    for (const [m, v] of pts) if (v < 70) { g.fillStyle = v < 54 ? "#ff2d55" : "#ff7b7b"; g.beginPath(); g.arc(x(m), y(v), 2.2, 0, 7); g.fill(); }
+    const [lm, lv] = pts[pts.length - 1], X = x(lm), Y = y(lv), c = lv < 70 ? "255,93,93" : "77,225,255";
+    const p = (t / 1000) % 1.6 / 1.6;
+    g.strokeStyle = `rgba(${c},${0.8 * (1 - p)})`; g.lineWidth = 1.5; g.beginPath(); g.arc(X, Y, 4 + 14 * p, 0, 7); g.stroke();
+    g.save(); g.shadowColor = `rgb(${c})`; g.shadowBlur = 14; g.fillStyle = "#fff"; g.beginPath(); g.arc(X, Y, 3.2, 0, 7); g.fill(); g.restore();
+    g.strokeStyle = `rgba(${c},.25)`; g.setLineDash([2, 4]); g.beginPath(); g.moveTo(X, T); g.lineTo(X, H - B); g.stroke(); g.setLineDash([]);
+  }
+  for (const [m, k] of marks) {
+    const X = x(m);
+    if (k === "alert") { g.save(); g.fillStyle = "#ffb020"; g.shadowColor = "#ffb020"; g.shadowBlur = 10; tri(g, X, T - 4, 5, true); g.restore(); }
+    else if (k === "nuisance") { g.strokeStyle = "#ffb020"; g.lineWidth = 1.2; tri(g, X, T - 4, 5, false); }
+    else if (k === "treat" || k === "felt") { g.save(); g.fillStyle = "#4cc9f0"; g.shadowColor = "#4cc9f0"; g.shadowBlur = 10; g.beginPath(); g.arc(X, H - B - 6, 3.5, 0, 7); g.fill(); g.restore(); }
+    else if (k === "meal") { g.fillStyle = "#9aa5b1"; g.fillRect(X - 3, H - B - 16, 6, 6); }
+    else if (k === "bolus") { g.fillStyle = "#7aa2ff"; g.fillRect(X - 1, H - B - 28, 2, 10); }
+  }
+}
+
+function tri(g, x, y, s, fill) {
+  g.beginPath(); g.moveTo(x, y + 1); g.lineTo(x - s, y + s * 1.6 + 1); g.lineTo(x + s, y + s * 1.6 + 1); g.closePath();
+  fill ? g.fill() : g.stroke();
+}
+
+function spark(canvas, hist, now) {
+  const [g, W, H] = fit(canvas);
+  g.clearRect(0, 0, W, H);
+  const t0 = now - 1440, x = m => (m - t0) / 1440 * W, top = 1.0, y = v => H - 2 - Math.min(v, top) / top * (H - 4);
+  for (const [m, v, mode] of hist) if (m >= t0 && mode === "aroused") { g.fillStyle = "rgba(255,176,32,.28)"; g.fillRect(x(m), 0, Math.max(1, W / 288), H); }
+  g.strokeStyle = "#5b6b80"; g.setLineDash([3, 3]); g.beginPath(); g.moveTo(0, y(0.2)); g.lineTo(W, y(0.2)); g.stroke(); g.setLineDash([]);
+  g.save(); g.strokeStyle = "#ffc46b"; g.shadowColor = "#ffb020"; g.shadowBlur = 8; g.lineWidth = 1.5; g.beginPath();
+  hist.filter(([m]) => m >= t0).forEach(([m, v], i) => { i ? g.lineTo(x(m), y(v)) : g.moveTo(x(m), y(v)); });
+  g.stroke(); g.restore();
+}
+
+function stats(el, rows) { el.innerHTML = rows.map(([k, v]) => `<div>${k}</div><div>${v}</div>`).join(""); }
+const pct = v => v == null ? "—" : v.toFixed(1) + "%";
+
+function render(s) {
+  if (!built) build(s);
+  const prev = latest; latest = s;
+  $("#clock").innerHTML = clock(s.minute) + (s.asleep ? `<span class="night">睡眠中</span>` : "") + (s.paused ? `<span class="night">已暂停</span>` : "");
+  const changed = s.body > 1.0;
+  $("#body").className = "body " + (changed ? "changed" : "normal");
+  $("#body").textContent = changed ? "胰岛素敏感性 +30%" : "正常";
+  $("#hud-patient").textContent = s.patient;
+  document.querySelectorAll("[data-act]").forEach(b => {
+    const k = b.dataset.act, on = { slow: 2, normal: 8, fast: 40, faster: 160 }[k] === s.speed;
+    b.classList.toggle("on", on || (k === "pause" && s.paused) || (k === "sensitive" && changed));
+  });
+  for (const h of s.houses) {
+    const el = $("#h-" + h.key);
+    const now = el.querySelector(".now");
+    now.innerHTML = h.now == null ? "—" : `${Math.round(h.now)} <small>mg/dL</small>`;
+    now.className = "now" + (h.now < 54 ? " severe" : h.now < 70 ? " low" : "");
+    const t = h.total || {}, last7 = h.days.slice(-7);
+    const sum = k => last7.reduce((a, d) => a + d[k], 0), mins = Math.max(1, sum("moments") * 5);
+    const below7 = 100 * sum("below") / mins, severe7 = 100 * sum("severe") / mins;
+    chips(el.querySelector(".chips"), [
+      ["近7天 <70", pct(below7), below7 > 1, "最近 7 天血糖低于 70 mg/dL 的时间占比"],
+      ["<54", pct(severe7), severe7 > 0, "最近 7 天血糖低于 54 mg/dL（严重）的时间占比"],
+      ["提醒/天", last7.length ? (sum("alerts") / (sum("moments") / 288)).toFixed(1) : "—", false, "最近 7 天平均每天提醒次数"],
+      ["无需吃糖", sum("alerts") ? Math.round(100 * sum("nuisance") / sum("alerts")) + "%" : "—", false, "最近 7 天的提醒里，患者查看后发现不需要吃糖的比例"],
+      ["累计 <70", pct(t.below_70_pct), (t.below_70_pct || 0) > 1, "到家以来血糖低于 70 的时间占比"],
+      ["低血糖/天", t.lows_per_day == null ? "—" : t.lows_per_day.toFixed(2), false, "到家以来平均每天低血糖次数（低于 70 持续至少 15 分钟）"],
+    ]);
+    if (h.dog) {
+      const d = h.dog, m = MODE[d.mode] || ["—", "routine"], el = $("#core");
+      const badge = $("#core-mode");
+      badge.textContent = d.alert ? "提醒：要低了！" + (d.mode === "aroused" ? "（警觉）" : "") : m[0];
+      badge.className = "mode " + (d.alert ? "alerting" : m[1]);
+      const hot = d.mode === "aroused";
+      el.classList.toggle("hot", hot); $("#h-dog").classList.toggle("hot", hot);
+      $("#hud-mode").textContent = d.alert ? "ALERT" : hot ? "AROUSED · LEARNING" : "CALM";
+      $("#hud-mode").style.color = d.alert ? "#ff9b9b" : hot ? "#ffc46b" : "#8fe0b0";
+      $("#hud-neurons").textContent = d.neurons; $("#hud-age").textContent = `${d.age.toLocaleString()} 刻`;
+      if (d.motor) {
+        const [q, a] = d.motor, top = Math.max(1e-6, Math.abs(q), Math.abs(a));
+        el.querySelector(".fill.q").style.width = (100 * Math.max(0, q) / top) + "%";
+        el.querySelector(".fill.a").style.width = (100 * Math.max(0, a) / top) + "%";
+        el.querySelector(".vq").textContent = q.toFixed(2); el.querySelector(".va").textContent = a.toFixed(2);
+      }
+      spark(el.querySelector("canvas.spark"), d.level_history, s.minute);
+      const mo = d.moments || {}, total = (mo.routine || 0) + (mo.aroused || 0);
+      stats(el.querySelector(".brainstats"), [
+        ["在新家的时刻", total.toLocaleString()],
+        ["其中警觉（学习）", total ? Math.round(100 * (mo.aroused || 0) / total) + "%" : "—"],
+        ["本刻 稳定步数", d.sweeps],
+        ["本刻 学习步数", d.learning_sweeps],
+        ["本刻 耗时", d.ms + " ms"],
+        ["累计 稳定步数", (d.total_sweeps.routine + d.total_sweeps.aroused).toLocaleString()],
+        ["累计 学习步数", d.total_learning_sweeps.toLocaleString()],
+        ["神经元 / 参数", `${d.neurons} / ${d.parameters}`],
+      ]);
+      core.feed(d, h, prev ? prev.minute : null, s.minute);
+    }
+  }
+  if (s.log.length) $("#log").innerHTML = s.log.map(([m, n]) => `<div><b>${clock(m)}</b> · ${n}</div>`).join("");
+}
+
+// ---------- glow sprites ----------
+const SPRITES = {};
+function sprite(rgb) {
+  if (SPRITES[rgb]) return SPRITES[rgb];
+  const c = document.createElement("canvas"); c.width = c.height = 64;
+  const g = c.getContext("2d"), gr = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+  gr.addColorStop(0, `rgba(255,255,255,1)`); gr.addColorStop(0.18, `rgba(${rgb},.95)`); gr.addColorStop(0.45, `rgba(${rgb},.28)`); gr.addColorStop(1, `rgba(${rgb},0)`);
+  g.fillStyle = gr; g.fillRect(0, 0, 64, 64);
+  return SPRITES[rgb] = c;
+}
+const C_CYAN = "77,225,255", C_VIOLET = "139,123,255", C_LILAC = "201,167,255", C_AMBER = "255,176,32", C_RED = "255,93,93";
+
+// ---------- the living network: real neurons, real synapse strengths, real rewrites ----------
+const SENSE_GROUPS = [["血糖", 8], ["趋势", 6], ["时刻", 8], ["胰岛素", 4], ["碳水", 4], ["运动", 4], ["睡眠", 1], ["刚吃糖", 1]];
+const LANES = { sensory: 0.15, association: 0.37, prefrontal: 0.64, motor: 0.9 };
+const LANE_NAMES = { sensory: "感觉 36", association: "联想区 48", prefrontal: "前额区 48", motor: "运动 2" };
+const DRAWN = 700, SPRINGS = 260, GROWN = 40;
+const core = {
+  ready: false, W: 0, H: 0, nodes: [], pop: [], out: [], group: [], shown: null, target: null, popMax: {},
+  eff: null, effMax: 1, drawn: [], springs: [], growth: [], pulses: [], waves: [],
+  hot: 0, hotTarget: 0, lowTarget: 0, lastAlertMinute: -1, rewired: 0, rewiredTotal: 0,
+
+  setup(canvas) {
+    if (!graph) return false;
+    const [, W, H] = fit(canvas);
+    if (!this.ready) {
+      const n = graph.n, P = graph.populations;
+      this.pop = new Array(n);
+      for (const [name, ids] of Object.entries(P)) for (const id of ids) this.pop[id] = name;
+      this.out = Array.from({ length: n }, () => []);
+      graph.pre.forEach((p, i) => this.out[p].push(i));
+      this.group = new Array(n).fill(-1);
+      const slot = new Array(n).fill(0); let k = 0;
+      SENSE_GROUPS.forEach(([, size], gi) => { for (let i = 0; i < size; i++, k++) { this.group[P.sensory[k]] = gi; slot[P.sensory[k]] = k + gi * 1.4; } });
+      const span = P.sensory.length + SENSE_GROUPS.length * 1.4;
+      this.nodes = Array.from({ length: n }, (_, id) => {
+        const pop = this.pop[id], ids = P[pop], i = ids.indexOf(id);
+        const cloud = pop === "association" || pop === "prefrontal";
+        const node = { cloud, r: cloud ? Math.sqrt((i + 0.5) / ids.length) : 0, a: i * 2.39996, spin: pop === "association" ? 1 : -1,
+          hx: LANES[pop], hy: pop === "sensory" ? (slot[id] + 0.5) / span : pop === "motor" ? 0.4 + 0.2 * i : 0.5, vx: 0, vy: 0, spark: 0 };
+        this.home(node, W, H, 0);
+        node.x = node.X; node.y = node.Y;
+        return node;
+      });
+      this.shown = new Float32Array(n);
+      this.W = W; this.H = H; this.ready = true;
+      $("#core-syn").textContent = graph.pre.length.toLocaleString();
+      $("#hud-synapses").textContent = graph.pre.length.toLocaleString();
+    } else if (W !== this.W || H !== this.H) {
+      for (const p of this.nodes) { p.x *= W / this.W; p.y *= H / this.H; }
+      this.W = W; this.H = H;
+    }
+    return true;
+  },
+
+  setWeights(eff) {
+    if (this.eff && eff.length === this.eff.length) {
+      const changed = []; let maxD = 0;
+      for (let i = 0; i < eff.length; i++) {
+        const d = eff[i] - this.eff[i];
+        if (Math.abs(d) > 1e-7) { changed.push(i); maxD = Math.max(maxD, Math.abs(d)); }
+      }
+      this.rewired = changed.length; this.rewiredTotal += changed.length;
+      if (changed.length) {
+        changed.sort((a, b) => Math.abs(eff[b] - this.eff[b]) - Math.abs(eff[a] - this.eff[a]));
+        for (const syn of changed.slice(0, GROWN)) {
+          const d = eff[syn] - this.eff[syn];
+          this.growth.push({ syn, t: -Math.random() * 0.5, dur: 0.9 + Math.random() * 0.6, up: d > 0, k: Math.abs(d) / maxD });
+          this.nodes[graph.pre[syn]].spark = 1; this.nodes[graph.post[syn]].spark = 1;
+        }
+        if (this.growth.length > 120) this.growth.splice(0, this.growth.length - 120);
+      }
+      $("#core-plastic").textContent = changed.length
+        ? `刚刚有 ${changed.length.toLocaleString()} 条突触被改写（金色变强、玫红变弱）`
+        : "这一秒没有突触被改写：平静时只用已学会的，不学习";
+    }
+    this.eff = eff;
+    let m = 0; for (const v of eff) m = Math.max(m, v); this.effMax = m || 1;
+    const order = Array.from(eff.keys()).sort((a, b) => eff[b] - eff[a]);
+    this.drawn = order.slice(0, DRAWN);
+    this.springs = order.filter(i => this.pop[graph.pre[i]] !== this.pop[graph.post[i]]).slice(0, SPRINGS);
+  },
+
+  feed(d, h, prevMinute, minute) {
+    if (!d.activation || !graph) return;
+    this.target = Float32Array.from(d.activation);
+    for (const [name, ids] of Object.entries(graph.populations)) {
+      let m = 0.05; for (const id of ids) m = Math.max(m, Math.abs(this.target[id]));
+      this.popMax[name] = Math.max(m, (this.popMax[name] || m) * 0.97);
+    }
+    this.hotTarget = d.mode === "aroused" ? 1 : 0;
+    this.lowTarget = h.now != null && h.now < 70 ? 1 : 0;
+    if (d.alert && minute !== this.lastAlertMinute && minute !== prevMinute) { this.lastAlertMinute = minute; this.waves.push({ t: performance.now() }); }
+    let active = 0;
+    for (const [name, ids] of Object.entries(graph.populations)) for (const id of ids) if (Math.abs(this.target[id]) / this.popMax[name] > 0.35) active++;
+    $("#core-active").innerHTML = `${active}<small> / ${graph.n}</small>`;
+  },
+
+  bright(id) { return Math.min(1, Math.abs(this.shown[id]) / (this.popMax[this.pop[id]] || 1)); },
+
+  // the bend of a synapse's filament; recurrent links within a region arc outward
+  curve(syn) {
+    const a = this.nodes[graph.pre[syn]], b = this.nodes[graph.post[syn]];
+    const dx = b.x - a.x, dy = b.y - a.y, off = (syn % 2 ? 1 : -1) * (this.pop[graph.pre[syn]] === this.pop[graph.post[syn]] ? 0.3 : 0.14);
+    return [a.x, a.y, (a.x + b.x) / 2 - dy * off, (a.y + b.y) / 2 + dx * off, b.x, b.y];
+  },
+  at([x1, y1, cx, cy, x2, y2], u) { const v = 1 - u; return [v * v * x1 + 2 * v * u * cx + u * u * x2, v * v * y1 + 2 * v * u * cy + u * u * y2]; },
+
+  // where a neuron drifts toward: sense and motor neurons keep their row; the two inner regions are slowly turning clouds
+  home(p, W, H, t) {
+    if (!p.cloud) { p.X = p.hx * W; p.Y = (0.07 + 0.86 * p.hy) * H; return; }
+    const a = p.a + p.spin * t * 0.00006, wob = 1 + 0.08 * Math.sin(t * 0.0004 + p.a);
+    p.X = p.hx * W + Math.cos(a) * p.r * wob * W * 0.09;
+    p.Y = (0.5 + Math.sin(a) * p.r * wob * 0.42) * H;
+  },
+
+  physics(dt, t) {
+    const N = this.nodes, W = this.W, H = this.H, n = N.length;
+    const fx = new Float32Array(n), fy = new Float32Array(n), jitter = 30 + 70 * this.hot;
+    for (let i = 0; i < n; i++) {
+      const p = N[i], pin = p.cloud ? 2.2 : 6;
+      this.home(p, W, H, t);
+      fx[i] += (p.X - p.x) * pin; fy[i] += (p.Y - p.y) * pin;
+      if (!REDUCED && p.cloud) { fx[i] += (Math.random() - 0.5) * jitter; fy[i] += (Math.random() - 0.5) * jitter; }
+    }
+    for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+      if (!N[i].cloud || !N[j].cloud) continue;
+      const dx = N[j].x - N[i].x, dy = N[j].y - N[i].y, d2 = dx * dx + dy * dy + 1;
+      if (d2 > 900) continue;
+      const f = Math.min(60, 900 / d2), d = Math.sqrt(d2);
+      fx[i] -= f * dx / d; fy[i] -= f * dy / d; fx[j] += f * dx / d; fy[j] += f * dy / d;
+    }
+    // the strongest synapses tug their two neurons toward each other
+    if (this.eff) for (const s of this.springs) {
+      const i = graph.pre[s], j = graph.post[s], dx = N[j].x - N[i].x, dy = N[j].y - N[i].y, d = Math.hypot(dx, dy) + 1;
+      const f = 14 * (this.eff[s] / this.effMax) ** 2;
+      if (N[i].cloud) { fx[i] += f * dx / d; fy[i] += f * dy / d; }
+      if (N[j].cloud) { fx[j] -= f * dx / d; fy[j] -= f * dy / d; }
+    }
+    for (let i = 0; i < n; i++) {
+      const p = N[i];
+      p.vx = (p.vx + fx[i] * dt) * 0.86; p.vy = (p.vy + fy[i] * dt) * 0.86;
+      p.x = Math.max(10, Math.min(W - 10, p.x + p.vx * dt)); p.y = Math.max(16, Math.min(H - 10, p.y + p.vy * dt));
+      p.spark = Math.max(0, p.spark - dt * 0.8);
+    }
+  },
+
+  draw(canvas, t, dt) {
+    if (!this.setup(canvas) || !this.target) return;
+    const [g, W, H] = fit(canvas), P = graph.populations;
+    dt = Math.min(dt, 0.05);
+    this.hot += (this.hotTarget - this.hot) * Math.min(1, dt * 3);
+    for (let i = 0; i < this.shown.length; i++) this.shown[i] += (this.target[i] - this.shown[i]) * Math.min(1, dt * 6);
+    this.physics(dt, t);
+    g.clearRect(0, 0, W, H);
+    const back = g.createLinearGradient(0, 0, W, 0);
+    back.addColorStop(0, "rgba(77,225,255,.05)"); back.addColorStop(0.5, this.hot > 0.5 ? "rgba(255,160,60,.07)" : "rgba(139,123,255,.05)"); back.addColorStop(1, "rgba(255,176,32,.04)");
+    g.fillStyle = back; g.fillRect(0, 0, W, H);
+    // region lanes
+    g.font = "10px Menlo, monospace"; g.textAlign = "center";
+    for (const [pop, x] of Object.entries(LANES)) {
+      g.strokeStyle = "rgba(120,160,255,.06)"; g.setLineDash([2, 6]); g.beginPath(); g.moveTo(x * W, 14); g.lineTo(x * W, H - 6); g.stroke(); g.setLineDash([]);
+      g.fillStyle = "rgba(160,190,230,.55)"; g.fillText(LANE_NAMES[pop], x * W, 10);
+    }
+    // the strongest synapses as filaments, brightness and width from their real strength
+    if (this.eff) {
+      const bins = [[], [], [], [], [], [], [], []];
+      for (const s of this.drawn) { const q = Math.min(3, Math.floor((this.eff[s] / this.effMax) ** 1.5 * 4)); bins[q + (graph.sign[s] > 0 ? 0 : 4)].push(s); }
+      const A = [0.05, 0.09, 0.15, 0.26], Wd = [0.5, 0.8, 1.1, 1.6];
+      bins.forEach((list, bi) => {
+        if (!list.length) return;
+        const q = bi % 4, exc = bi < 4;
+        g.strokeStyle = `rgba(${exc ? C_CYAN : C_VIOLET},${A[q] * (1 + 0.6 * this.hot)})`; g.lineWidth = Wd[q];
+        g.beginPath();
+        for (const s of list) { const c = this.curve(s); g.moveTo(c[0], c[1]); g.quadraticCurveTo(c[2], c[3], c[4], c[5]); }
+        g.stroke();
+      });
+    }
+    g.save(); g.globalCompositeOperation = "lighter";
+    // rewritten synapses grow along their path, then fade
+    this.growth = this.growth.filter(e => (e.t += dt / e.dur) < 1.8);
+    for (const e of this.growth) {
+      if (e.t <= 0) continue;
+      const c = this.curve(e.syn), u = Math.min(1, e.t), fade = e.t > 1 ? 1 - (e.t - 1) / 0.8 : 1;
+      const col = e.up ? "255,214,120" : "255,90,150", a = (0.18 + 0.5 * e.k) * fade;
+      g.strokeStyle = `rgba(${col},${a})`; g.lineWidth = 0.7 + 1.3 * e.k; g.beginPath();
+      for (let i = 0; i <= 14; i++) { const [x, y] = this.at(c, u * i / 14); i ? g.lineTo(x, y) : g.moveTo(x, y); }
+      g.stroke();
+      if (e.t < 1) { const [x, y] = this.at(c, u), s = 10 + 12 * e.k; g.globalAlpha = 0.9; g.drawImage(sprite(col), x - s / 2, y - s / 2, s, s); g.globalAlpha = 1; }
+    }
+    // signals leave active neurons along their synapses
+    if (!REDUCED) {
+      this.spawn = (this.spawn || 0) + (latest && latest.paused ? 0.2 : 1) * (45 + 120 * this.hot) * dt;
+      const w = new Float32Array(graph.n); let total = 0;
+      for (let id = 0; id < graph.n; id++) total += w[id] = this.out[id].length ? this.bright(id) ** 1.5 : 0;
+      for (; this.spawn >= 1 && total > 1e-6; this.spawn--) {
+        let r = Math.random() * total, id = 0;
+        while (id < graph.n - 1 && (r -= w[id]) > 0) id++;
+        const syn = this.out[id][(Math.random() * this.out[id].length) | 0];
+        this.pulses.push({ syn, t: 0, dur: 0.7 + Math.random() * 0.8, b: this.bright(id) });
+      }
+      this.spawn = Math.min(this.spawn, 5);
+      if (this.pulses.length > 500) this.pulses.splice(0, this.pulses.length - 500);
+    }
+    this.pulses = this.pulses.filter(p => (p.t += dt / p.dur) < 1);
+    for (const p of this.pulses) {
+      const [X, Y] = this.at(this.curve(p.syn), p.t), s = 6 + 6 * p.b;
+      g.globalAlpha = Math.sin(Math.PI * p.t) * (0.3 + 0.6 * p.b);
+      g.drawImage(sprite(graph.sign[p.syn] > 0 ? C_CYAN : C_VIOLET), X - s / 2, Y - s / 2, s, s);
+    }
+    g.globalAlpha = 1;
+    // neurons: cells that glow with their real activation; a gold ring when one of their synapses was rewritten
+    for (let id = 0; id < graph.n; id++) {
+      const pop = this.pop[id]; if (pop === "motor") continue;
+      const p = this.nodes[id], b = this.bright(id);
+      const c = pop === "sensory" ? C_CYAN : pop === "association" ? C_VIOLET : C_LILAC, s = 7 + 20 * b;
+      g.globalAlpha = 0.22 + 0.78 * b; g.drawImage(sprite(this.shown[id] < 0 ? C_RED : c), p.x - s / 2, p.y - s / 2, s, s);
+      if (p.spark > 0) { g.globalAlpha = p.spark * 0.8; g.strokeStyle = "rgb(255,214,120)"; g.lineWidth = 1; g.beginPath(); g.arc(p.x, p.y, 4 + 10 * (1 - p.spark), 0, 7); g.stroke(); }
+    }
+    g.globalAlpha = 1;
+    const [q, a] = P.motor;
+    for (const [id, c, name] of [[q, C_CYAN, "不出声"], [a, C_AMBER, "提醒"]]) {
+      const p = this.nodes[id], b = this.bright(id), s = 24 + 40 * b + (id === a ? 5 * Math.sin(t / 150) * b : 0);
+      g.globalAlpha = 0.35 + 0.65 * b; g.drawImage(sprite(c), p.x - s / 2, p.y - s / 2, s, s);
+      g.globalAlpha = 1; g.fillStyle = `rgba(${c},.95)`; g.font = "11px -apple-system, 'PingFang SC', sans-serif"; g.textAlign = "center";
+      g.fillText(name, p.x, p.y + 26);
+    }
+    this.waves = this.waves.filter(w => (t - w.t) < 1500);
+    for (const w of this.waves) {
+      const k = (t - w.t) / 1500, e = 1 - Math.pow(1 - k, 3), p = this.nodes[a];
+      g.strokeStyle = `rgba(${C_AMBER},${0.9 * (1 - k)})`; g.lineWidth = 3 * (1 - k) + 0.5;
+      g.beginPath(); g.arc(p.x, p.y, 12 + W * 0.55 * e, 0, 7); g.stroke();
+    }
+    g.restore();
+    // sense group names beside their neurons
+    g.font = "10.5px -apple-system, 'PingFang SC', sans-serif"; g.textAlign = "right"; g.textBaseline = "middle";
+    SENSE_GROUPS.forEach(([name], gi) => {
+      const ids = P.sensory.filter(id => this.group[id] === gi), y = ids.reduce((s, id) => s + this.nodes[id].y, 0) / ids.length;
+      g.fillStyle = "rgba(160,200,255,.65)"; g.fillText(name, this.nodes[ids[0]].x - 10, y);
+    });
+    g.textBaseline = "alphabetic";
+  },
+};
+
+async function pollWeights() {
+  try {
+    const r = await (await fetch("/api/weights")).json();
+    const bin = atob(r.efficacy), bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    if (core.ready) core.setWeights(new Float32Array(bytes.buffer));
+  } catch (e) { console.error(e); }
+  setTimeout(pollWeights, 1000);
+}
+
+// ---------- decorative background particles ----------
+const bg = {
+  pts: [], tint: [77, 225, 255],
+  init() {
+    const n = REDUCED ? 0 : Math.min(90, Math.round(innerWidth * innerHeight / 16000));
+    this.pts = Array.from({ length: n }, () => ({ x: Math.random() * innerWidth, y: Math.random() * innerHeight, vx: (Math.random() - .5) * 12, vy: (Math.random() - .5) * 12, r: Math.random() * 1.6 + .4 }));
+  },
+  draw(canvas, dt) {
+    const [g, W, H] = fit(canvas);
+    g.clearRect(0, 0, W, H);
+    const want = core.lowTarget ? [255, 93, 93] : core.hot > 0.5 ? [255, 176, 32] : [77, 225, 255];
+    this.tint = this.tint.map((v, i) => v + (want[i] - v) * Math.min(1, dt * 1.5));
+    const c = this.tint.map(Math.round).join(","), speed = 1 + 2 * core.hot;
+    for (const p of this.pts) {
+      p.x += p.vx * dt * speed; p.y += p.vy * dt * speed;
+      if (p.x < -20) p.x = W + 20; if (p.x > W + 20) p.x = -20; if (p.y < -20) p.y = H + 20; if (p.y > H + 20) p.y = -20;
+    }
+    g.lineWidth = 0.6;
+    for (let i = 0; i < this.pts.length; i++) for (let j = i + 1; j < this.pts.length; j++) {
+      const a = this.pts[i], b = this.pts[j], d2 = (a.x - b.x) ** 2 + (a.y - b.y) ** 2;
+      if (d2 < 130 * 130) { g.strokeStyle = `rgba(${c},${0.10 * (1 - Math.sqrt(d2) / 130)})`; g.beginPath(); g.moveTo(a.x, a.y); g.lineTo(b.x, b.y); g.stroke(); }
+    }
+    g.globalCompositeOperation = "lighter";
+    for (const p of this.pts) { const s = p.r * 7; g.globalAlpha = 0.5; g.drawImage(sprite(c), p.x - s / 2, p.y - s / 2, s, s); }
+    g.globalAlpha = 1; g.globalCompositeOperation = "source-over";
+  },
+};
+
+// ---------- animation loop ----------
+let lastFrame = performance.now(), lastCharts = 0;
+function frame(t) {
+  const dt = Math.min(0.1, (t - lastFrame) / 1000); lastFrame = t;
+  bg.draw($("#bg"), dt);
+  if (latest && built) {
+    if (t - lastCharts > 33) {
+      lastCharts = t;
+      for (const h of latest.houses) chart($("#h-" + h.key).querySelector("canvas.chartc"), h, latest.minute, t);
+    }
+    core.draw($("#core canvas.net"), t, dt);
+  }
+  next(frame);
+}
+
+// some embedded views throttle requestAnimationFrame; a timer keeps the brain moving there
+function next(cb) {
+  let done = false;
+  const go = t => { if (!done) { done = true; cb(t); } };
+  requestAnimationFrame(go);
+  setTimeout(() => go(performance.now()), 40);
+}
+
+async function tick() {
+  try { render(await (await fetch("/api/state")).json()); } catch (e) { console.error(e); }
+  setTimeout(tick, 250);
+}
+
+document.querySelectorAll("[data-act]").forEach(b => b.onclick = () => fetch("/api/act/" + b.dataset.act, { method: "POST" }));
+
+async function proof() {
+  const e = await (await fetch("/api/evidence")).json();
+  if (!e) return;
+  const rows = [["dog", "Cadence 警报犬"], ["frozen", "同一只狗，到家后不再学习"], ["always", "同一只狗，每一刻都学习"], ["wild", "没进过犬舍、自己摸索的狗"], ["rule", "血糖仪趋势规则（训练师）"], ["random", "随机提醒（每 5 分钟 2%）"], ["none", "没有提醒"]];
+  const stages = [["routine", "常规（第 8–21 天）"], ["changed", "身体变敏感（第 22–35 天）"], ["recovered", "恢复原样（第 36–49 天）"]];
+  let html = `<table><tr><th>陪伴者</th>` + stages.map(([, n]) => `<th colspan="3">${n}</th>`).join("") + `</tr><tr><th></th>` +
+    stages.map(() => `<th>低于70</th><th>低血糖/天</th><th>提醒/天</th>`).join("") + `</tr>`;
+  for (const [k, n] of rows) {
+    if (!e.means.routine || !e.means.routine[k]) continue;
+    html += `<tr class="${k === "dog" ? "dog" : ""}"><td>${n}</td>` + stages.map(([s]) => {
+      const r = e.means[s][k]; return `<td>${r.below_70_pct.toFixed(2)}%</td><td>${r.lows_per_day.toFixed(2)}</td><td>${r.alerts_per_day.toFixed(1)}</td>`;
+    }).join("") + `</tr>`;
+  }
+  $("#evidence").innerHTML = html + `</table>`;
+  $("#evidence-note").textContent = `来源：evidence/${e.file} · Cadence ${e.environment.cadence} · 每组 ${e.configuration.seeds.length} 段生活的平均值。数字只说明这组声明过的测试，不代表在真实患者身上的效果。`;
+}
+
+const barHeight = () => document.documentElement.style.setProperty("--barH", $(".bar").offsetHeight + "px");
+bg.init(); barHeight(); addEventListener("resize", () => { bg.init(); barHeight(); });
+fetch("/api/brain").then(r => r.json()).then(g => { graph = g; });
+tick(); proof(); pollWeights(); next(frame);
+</script>
+</body>
+</html>

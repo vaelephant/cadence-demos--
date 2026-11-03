@@ -1,0 +1,424 @@
+{
+ "question": "Does one continuing Cadence brain, trained in a kennel and then living with one virtual patient it has never met, keep that patient out of lows, adapt when the body changes and hold up when it changes back?",
+ "configuration": {
+  "patients": [
+   "adult#001"
+  ],
+  "seeds": [
+   0,
+   1,
+   2
+  ],
+  "stages": [
+   [
+    "arrival",
+    0,
+    7,
+    1.0
+   ],
+   [
+    "routine",
+    7,
+    21,
+    1.0
+   ],
+   [
+    "changed",
+    21,
+    35,
+    1.3
+   ],
+   [
+    "recovered",
+    35,
+    49,
+    1.0
+   ]
+  ],
+  "genes": {
+   "modules": [
+    48
+   ],
+   "sensory_scale": 4.0,
+   "temperature": 0.3,
+   "trace_amplitude": 0.3,
+   "trace_decay": 0.1,
+   "episodic": true,
+   "consolidation": 0.05,
+   "eta": 0.03,
+   "eta_bias": 0.003,
+   "lam": 0.8,
+   "gamma": 0.95,
+   "eta_critic": 5.0,
+   "arousal": {
+    "threshold": 0.2,
+    "decay": 0.9,
+    "tolerance": 2.0,
+    "floor": 0.1,
+    "fast": 0.05,
+    "slow": 0.005,
+    "heat": 1.0,
+    "youth": 288,
+    "value_surprise": 1.0,
+    "record_surprise": 0.0,
+    "need": 0.0
+   },
+   "adult": {
+    "eta": 0.003
+   }
+  },
+  "adult": {
+   "heat": 0.0,
+   "temperature": 0.15
+  },
+  "inputs": 36,
+  "kennel": {
+   "patients": [
+    "adolescent#002",
+    "adolescent#004",
+    "adolescent#006",
+    "adult#002",
+    "adult#003",
+    "adult#005",
+    "adult#006",
+    "adult#008",
+    "child#002",
+    "child#004"
+   ],
+   "days_each": 6,
+   "quiet_lessons": 0.05,
+   "brains": "dev-adult-eta"
+  }
+ },
+ "environment": {
+  "cadence": "0.80.0",
+  "python": "3.14.7",
+  "numpy": "2.5.3",
+  "machine": "arm64"
+ },
+ "kennel_wall_seconds": 24.2,
+ "wall_seconds": 45.5,
+ "means": {
+  "arrival": {
+   "dog": {
+    "below_70_pct": 0.067,
+    "below_54_pct": 0.0,
+    "lows_per_day": 0.047,
+    "night_lows_per_day": 0.0,
+    "in_range_pct": 97.367,
+    "alerts_per_day": 6.573,
+    "nuisance_share": 0.567,
+    "aroused_share": 0.322,
+    "learning_sweeps_per_moment": 2.567
+   }
+  },
+  "routine": {
+   "dog": {
+    "below_70_pct": 0.043,
+    "below_54_pct": 0.0,
+    "lows_per_day": 0.023,
+    "night_lows_per_day": 0.0,
+    "in_range_pct": 98.5,
+    "alerts_per_day": 6.643,
+    "nuisance_share": 0.577,
+    "aroused_share": 0.117,
+    "learning_sweeps_per_moment": 1.103
+   }
+  },
+  "changed": {
+   "dog": {
+    "below_70_pct": 0.963,
+    "below_54_pct": 0.0,
+    "lows_per_day": 0.333,
+    "night_lows_per_day": 0.213,
+    "in_range_pct": 98.5,
+    "alerts_per_day": 17.02,
+    "nuisance_share": 0.573,
+    "aroused_share": 0.156,
+    "learning_sweeps_per_moment": 1.437
+   }
+  },
+  "recovered": {
+   "dog": {
+    "below_70_pct": 0.22,
+    "below_54_pct": 0.0,
+    "lows_per_day": 0.07,
+    "night_lows_per_day": 0.07,
+    "in_range_pct": 97.733,
+    "alerts_per_day": 5.357,
+    "nuisance_share": 0.577,
+    "aroused_share": 0.067,
+    "learning_sweeps_per_moment": 0.607
+   }
+  }
+ },
+ "lives": [
+  {
+   "companion": "dog",
+   "patient": "adult#001",
+   "seed": 0,
+   "stages": {
+    "arrival": {
+     "days": 7.0,
+     "below_70_pct": 0.0,
+     "below_54_pct": 0.0,
+     "in_range_pct": 97.7,
+     "lows_per_day": 0.0,
+     "night_lows_per_day": 0.0,
+     "alerts_per_day": 6.0,
+     "nuisance_share": 0.62,
+     "aroused_share": 0.304,
+     "sweeps_per_moment": 27.4,
+     "learning_sweeps_per_moment": 2.61,
+     "ms_per_moment": 1.76,
+     "reward_per_day": -2.01,
+     "lessons": 0,
+     "agreement_with_trainer": null
+    },
+    "routine": {
+     "days": 14.0,
+     "below_70_pct": 0.13,
+     "below_54_pct": 0.0,
+     "in_range_pct": 98.4,
+     "lows_per_day": 0.07,
+     "night_lows_per_day": 0.0,
+     "alerts_per_day": 5.5,
+     "nuisance_share": 0.57,
+     "aroused_share": 0.091,
+     "sweeps_per_moment": 31.2,
+     "learning_sweeps_per_moment": 0.91,
+     "ms_per_moment": 1.35,
+     "reward_per_day": -2.21,
+     "lessons": 0,
+     "agreement_with_trainer": null
+    },
+    "changed": {
+     "days": 14.0,
+     "below_70_pct": 0.88,
+     "below_54_pct": 0.0,
+     "in_range_pct": 98.6,
+     "lows_per_day": 0.43,
+     "night_lows_per_day": 0.14,
+     "alerts_per_day": 15.21,
+     "nuisance_share": 0.55,
+     "aroused_share": 0.142,
+     "sweeps_per_moment": 30.9,
+     "learning_sweeps_per_moment": 1.3,
+     "ms_per_moment": 1.33,
+     "reward_per_day": -7.46,
+     "lessons": 0,
+     "agreement_with_trainer": null
+    },
+    "recovered": {
+     "days": 14.0,
+     "below_70_pct": 0.0,
+     "below_54_pct": 0.0,
+     "in_range_pct": 98.3,
+     "lows_per_day": 0.0,
+     "night_lows_per_day": 0.0,
+     "alerts_per_day": 5.36,
+     "nuisance_share": 0.63,
+     "aroused_share": 0.051,
+     "sweeps_per_moment": 31.9,
+     "learning_sweeps_per_moment": 0.51,
+     "ms_per_moment": 1.25,
+     "reward_per_day": -1.59,
+     "lessons": 0,
+     "agreement_with_trainer": null
+    }
+   },
+   "cpu_seconds": 18.2,
+   "neurons": 134,
+   "parameters": 4384,
+   "age": 14112,
+   "moments": {
+    "routine": 12358,
+    "aroused": 1754
+   },
+   "sweeps": {
+    "routine": 399776,
+    "aroused": 34272
+   },
+   "learning_sweeps": 16243,
+   "refusals": 0
+  },
+  {
+   "companion": "dog",
+   "patient": "adult#001",
+   "seed": 1,
+   "stages": {
+    "arrival": {
+     "days": 7.0,
+     "below_70_pct": 0.2,
+     "below_54_pct": 0.0,
+     "in_range_pct": 97.5,
+     "lows_per_day": 0.14,
+     "night_lows_per_day": 0.0,
+     "alerts_per_day": 7.43,
+     "nuisance_share": 0.58,
+     "aroused_share": 0.326,
+     "sweeps_per_moment": 26.3,
+     "learning_sweeps_per_moment": 2.34,
+     "ms_per_moment": 1.72,
+     "reward_per_day": -3.0,
+     "lessons": 0,
+     "agreement_with_trainer": null
+    },
+    "routine": {
+     "days": 14.0,
+     "below_70_pct": 0.0,
+     "below_54_pct": 0.0,
+     "in_range_pct": 99.3,
+     "lows_per_day": 0.0,
+     "night_lows_per_day": 0.0,
+     "alerts_per_day": 6.57,
+     "nuisance_share": 0.57,
+     "aroused_share": 0.094,
+     "sweeps_per_moment": 31.1,
+     "learning_sweeps_per_moment": 0.78,
+     "ms_per_moment": 1.36,
+     "reward_per_day": -2.3,
+     "lessons": 0,
+     "agreement_with_trainer": null
+    },
+    "changed": {
+     "days": 14.0,
+     "below_70_pct": 0.22,
+     "below_54_pct": 0.0,
+     "in_range_pct": 99.4,
+     "lows_per_day": 0.14,
+     "night_lows_per_day": 0.07,
+     "alerts_per_day": 17.71,
+     "nuisance_share": 0.55,
+     "aroused_share": 0.17,
+     "sweeps_per_moment": 30.8,
+     "learning_sweeps_per_moment": 1.62,
+     "ms_per_moment": 1.36,
+     "reward_per_day": -6.48,
+     "lessons": 0,
+     "agreement_with_trainer": null
+    },
+    "recovered": {
+     "days": 14.0,
+     "below_70_pct": 0.0,
+     "below_54_pct": 0.0,
+     "in_range_pct": 97.7,
+     "lows_per_day": 0.0,
+     "night_lows_per_day": 0.0,
+     "alerts_per_day": 4.71,
+     "nuisance_share": 0.55,
+     "aroused_share": 0.066,
+     "sweeps_per_moment": 31.5,
+     "learning_sweeps_per_moment": 0.55,
+     "ms_per_moment": 1.24,
+     "reward_per_day": -1.65,
+     "lessons": 0,
+     "agreement_with_trainer": null
+    }
+   },
+   "cpu_seconds": 18.2,
+   "neurons": 134,
+   "parameters": 4384,
+   "age": 14112,
+   "moments": {
+    "routine": 12122,
+    "aroused": 1990
+   },
+   "sweeps": {
+    "routine": 389344,
+    "aroused": 39968
+   },
+   "learning_sweeps": 16584,
+   "refusals": 0
+  },
+  {
+   "companion": "dog",
+   "patient": "adult#001",
+   "seed": 2,
+   "stages": {
+    "arrival": {
+     "days": 7.0,
+     "below_70_pct": 0.0,
+     "below_54_pct": 0.0,
+     "in_range_pct": 96.9,
+     "lows_per_day": 0.0,
+     "night_lows_per_day": 0.0,
+     "alerts_per_day": 6.29,
+     "nuisance_share": 0.5,
+     "aroused_share": 0.336,
+     "sweeps_per_moment": 27.3,
+     "learning_sweeps_per_moment": 2.75,
+     "ms_per_moment": 1.79,
+     "reward_per_day": -2.24,
+     "lessons": 0,
+     "agreement_with_trainer": null
+    },
+    "routine": {
+     "days": 14.0,
+     "below_70_pct": 0.0,
+     "below_54_pct": 0.0,
+     "in_range_pct": 97.8,
+     "lows_per_day": 0.0,
+     "night_lows_per_day": 0.0,
+     "alerts_per_day": 7.86,
+     "nuisance_share": 0.59,
+     "aroused_share": 0.167,
+     "sweeps_per_moment": 30.0,
+     "learning_sweeps_per_moment": 1.62,
+     "ms_per_moment": 1.4,
+     "reward_per_day": -2.96,
+     "lessons": 0,
+     "agreement_with_trainer": null
+    },
+    "changed": {
+     "days": 14.0,
+     "below_70_pct": 1.79,
+     "below_54_pct": 0.0,
+     "in_range_pct": 97.5,
+     "lows_per_day": 0.43,
+     "night_lows_per_day": 0.43,
+     "alerts_per_day": 18.14,
+     "nuisance_share": 0.62,
+     "aroused_share": 0.156,
+     "sweeps_per_moment": 30.5,
+     "learning_sweeps_per_moment": 1.39,
+     "ms_per_moment": 1.31,
+     "reward_per_day": -11.54,
+     "lessons": 0,
+     "agreement_with_trainer": null
+    },
+    "recovered": {
+     "days": 14.0,
+     "below_70_pct": 0.66,
+     "below_54_pct": 0.0,
+     "in_range_pct": 97.2,
+     "lows_per_day": 0.21,
+     "night_lows_per_day": 0.21,
+     "alerts_per_day": 6.0,
+     "nuisance_share": 0.55,
+     "aroused_share": 0.083,
+     "sweeps_per_moment": 31.2,
+     "learning_sweeps_per_moment": 0.76,
+     "ms_per_moment": 1.24,
+     "reward_per_day": -4.23,
+     "lessons": 0,
+     "agreement_with_trainer": null
+    }
+   },
+   "cpu_seconds": 18.4,
+   "neurons": 134,
+   "parameters": 4384,
+   "age": 14112,
+   "moments": {
+    "routine": 11798,
+    "aroused": 2314
+   },
+   "sweeps": {
+    "routine": 380064,
+    "aroused": 44160
+   },
+   "learning_sweeps": 20769,
+   "refusals": 0
+  }
+ ]
+}

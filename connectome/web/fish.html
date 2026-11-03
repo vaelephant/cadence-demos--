@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>From connectome to Cadence · a larval zebrafish with a compiled brainstem</title>
+<meta name="description" content="The larval zebrafish with the compiled brainstem in it: two copies of the compiled half-brainstem, one per side, hold the gaze in a Matrix-styled aquarium while a declared pilot swims the body.">
+<link rel="icon" href="data:,">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<link rel="stylesheet" href="./site.css">
+<style>
+  #toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:4px 5px;padding:6px 12px;flex-shrink:0;background:rgba(2,14,7,.96);border-top:1px solid var(--line)}
+  #toolbar button{font-size:11px;padding:3px 7px;white-space:nowrap}
+  #toolbar .g{color:var(--dim);font-size:10px;letter-spacing:.1em;text-transform:uppercase;margin:0 2px 0 8px}
+  #toolbar .g:first-child{margin-left:0}
+  #saccade-left,#saccade-right{border-color:rgba(255,209,102,.6);color:var(--burst)}
+  #saccade-left:hover,#saccade-right:hover{background:rgba(255,209,102,.1)}
+  /* a simple toolbar: tap, feed, light, camera, saccades; the stripes and the lamp mover stay reachable by script */
+  #stripes,#direction,#speed,#light-move{display:none}
+  #hint{position:absolute;right:10px;bottom:8px;color:var(--dim);font-size:10px;text-align:right;pointer-events:none;z-index:3;text-shadow:0 0 4px #000}
+  #toast{position:absolute;left:50%;bottom:10px;transform:translateX(-50%);color:var(--ink);font-size:12px;opacity:0;transition:opacity .4s;pointer-events:none;z-index:3;text-shadow:0 0 6px #000;white-space:nowrap}
+  #toast.show{opacity:1}
+  #noscan{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--dim);font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+  #lesson-panel{flex-shrink:0;border:1px solid var(--line);border-radius:7px;padding:10px 12px;margin-bottom:12px;background:rgba(2,14,7,.9)}
+  .lesson-controls{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:center}
+  #teaching-controls>summary{cursor:pointer;min-height:26px;line-height:26px}
+  #lesson-panel{position:relative}.lesson-heading span,.lesson-scope{color:var(--dim);font-size:10px}
+  .lesson-controls{margin:8px 0}.lesson-controls button{font-size:11px}
+  #lesson-guide{font-size:11px;color:var(--soft);margin:6px 0}
+  .lesson-readout{display:grid;grid-template-columns:1fr 1.5fr;gap:14px;font-size:11px}
+  .lesson-readout p{margin:4px 0;min-width:0}.lesson-scope{margin:5px 0 0}
+  #probe-result{color:var(--burst);margin-bottom:5px}
+  .teach-primary{background:#173d22;border-color:#67e78e;color:#d8ffe1}
+  #response-bars>div{display:grid;grid-template-columns:115px 1fr 55px;gap:8px;align-items:center;font-size:10px}
+  #response-bars output{text-align:right}#response-bars meter{width:100%;height:12px;accent-color:#67e78e}
+  #practice-progress{width:100%;height:7px;accent-color:#ffd166}
+  #more-controls{margin-top:5px;font-size:10px;color:var(--soft)}#more-controls summary{cursor:pointer;width:max-content}
+  #learning-key{position:absolute;left:10px;top:10px;z-index:2;font-size:11px;pointer-events:none;background:rgba(0,10,4,.86);padding:5px 8px;border-radius:4px}
+  #learning-key span{color:var(--burst)}#brain-learning{display:block;font-size:10px;color:var(--soft)}
+  @media(max-height:800px) and (min-width:761px){#page{position:static;min-height:100vh;padding-bottom:45px}html,body{overflow:auto}#main{min-height:430px}}
+  @media(max-width:760px){#hint{display:none}.lesson-readout{grid-template-columns:1fr;gap:0}#world{display:flex;flex-wrap:wrap;overflow:visible}.seg button{flex:1}#toast{white-space:normal;width:90%;text-align:center}}
+</style>
+</head>
+<body>
+<div id="page">
+  <header id="mast"></header>
+  <nav id="nav" aria-label="Pages"></nav>
+  <section id="lesson-panel" aria-label="Teach the compiled brain">
+    <details id="teaching-controls">
+    <summary class="lesson-heading"><b>Teach this fish</b></summary>
+    <div class="lesson-controls">
+      <span id="world" class="seg" aria-label="What to teach">
+        <button type="button" data-world="still" class="on" aria-pressed="true" data-tip="Teach the eyes to keep looking to the side after a glance.">Hold your gaze</button>
+        <button type="button" data-world="back" aria-pressed="false" data-tip="Teach the eyes to drift back after a glance. The same brain keeps learning; nothing is reset.">Let it return</button>
+      </span>
+      <button id="practice-lesson" type="button" class="teach-primary" data-tip="Practise at 8× speed, shown in the Time control. You can change it anytime. The fish gets 10 fish minutes of hold practice, or 2½ fish minutes of return practice. Learning then pauses so you can see the result.">Teach this lesson</button>
+      <button id="measure-learning" type="button" data-tip="Compare the starting and learned brains after the same glance. The test runs on copies, so it does not disturb or teach the fish.">Test its gaze</button>
+      <button id="learning-toggle" type="button" data-tip="Pause changes to the connections while the fish keeps living. Resume continues with everything it has learned.">Pause learning</button>
+    </div>
+    <p id="lesson-guide">Teach it to keep looking to the side after a glance. Gold flashes mark connections changing as it learns.</p>
+    <div class="lesson-readout">
+      <div><p id="learning-progress" role="status"></p><progress id="practice-progress" max="1" value="0" aria-label="Lesson progress" hidden></progress></div>
+      <div id="gaze-test" data-tip="The bars update as the fish learns during a lesson. They show how much of a glance it can hold five seconds later. A longer bar means a stronger hold. Values over 100% mean the response is growing." tabindex="0">
+        <p id="probe-result" aria-live="polite">Gaze held after 5 seconds · updates during teaching.</p>
+        <div id="response-bars" hidden>
+          <div><span>Before learning</span><meter id="response-before" min="0" max="100" value="0"></meter><output id="value-before"></output></div>
+          <div><span>Now · left</span><meter id="response-left" min="0" max="100" value="0"></meter><output id="value-left"></output></div>
+          <div><span>Now · right</span><meter id="response-right" min="0" max="100" value="0"></meter><output id="value-right"></output></div>
+        </div>
+      </div>
+    </div>
+    <details id="more-controls"><summary>More controls</summary><div class="lesson-controls">
+      <button id="reset-synapses" type="button" data-tip="Forget the lessons and restore the starting connections. The fish stays in the same tank.">Reset learning</button>
+      <button id="auto-saccades" type="button" aria-pressed="true" data-tip="Let the fish glance around on its own. Each undisturbed glance can provide a lesson.">Automatic glances on</button>
+    </div></details>
+    <p class="lesson-scope">The gaze circuit learns. Swimming uses a fixed pilot. <a href="./explain.html">How it works →</a></p>
+    </details>
+  </section>
+  <main id="main" class="two">
+    <section class="view" id="tank" aria-label="Aquarium">
+      <div class="top"><p class="h" id="tank-title">The fish</p></div>
+      <div class="host" id="tank-host">
+        <div id="hint">drag to orbit · wheel to zoom · space pauses</div>
+        <div id="toast"></div>
+      </div>
+      <div id="toolbar">
+        <span class="g">tank</span>
+        <button id="tap-left" type="button" data-tip="Tap the left pane to trigger the fixed escape reflex. A turn may interrupt the current gaze lesson.">tap left</button>
+        <button id="tap-right" type="button" data-tip="Tap the right pane to trigger the fixed escape reflex. A turn may interrupt the current gaze lesson.">tap right</button>
+        <button id="stripes" type="button" title="optomotor stripes on the floor">stripes off</button>
+        <button id="direction" type="button" title="the stripes' direction along the tank">direction +x</button>
+        <button id="speed" type="button" title="the stripes' speed">5 mm/s</button>
+        <button id="prey" type="button" data-tip="Drops a paramecium, the larva's prey, at a random spot. The pilot hunts it: a turn toward it, a strike when it is within reach of the snout, and another one appears.">feed</button>
+        <button id="light-move" type="button" title="the lamp to a random place above the tank">move light</button>
+        <button id="light-on" type="button" class="on" data-tip="The lamp over the tank, on or off. It lights the tank and the pilot's light senses; no compiled circuit reads it.">light on</button>
+        <span class="g">camera</span>
+        <button id="follow" type="button" data-tip="The camera follows the fish. Off, it stays where you left it; drag to orbit, wheel to zoom.">follow fish</button>
+        <button id="pause" type="button" data-tip="Pauses the fish, its brain and the tank. The space bar does the same.">pause</button>
+        <button id="life-speed" type="button" data-tip="Choose 1×, 4× or 8×. Teaching starts at 8× and restores your previous speed afterward. If you change Time during a lesson, your choice stays.">Time: 1×</button>
+        <span class="g">saccades</span>
+        <button id="saccade-left" type="button" data-tip="Ask the fish to glance left. For manual teaching, wait at least four fish seconds between glances.">look left</button>
+        <button id="saccade-right" type="button" data-tip="Ask the fish to glance right. For manual teaching, wait at least four fish seconds between glances.">look right</button>
+
+      </div>
+    </section>
+    <section class="view" id="brain" aria-label="Cadence patch net, compiled from the connectome">
+      <div class="top"><p class="h">Inside the compiled brain</p><div class="tools"><button id="fit" type="button" data-tip="The brain view back to its resting frame." data-tip-side="below">fit</button><button id="spin" type="button" class="on" data-tip="A slow spin of the brain view until you drag it." data-tip-side="below">spin</button></div></div>
+      <div class="host" id="view-host"><div id="learning-key">Green: activity · <span>gold: learning</span><small id="brain-learning">Waiting for a lesson</small></div></div>
+    </section>
+  </main>
+</div>
+<div id="loading">loading the Cadence patch net</div>
+<script type="module" src="./fish_page.js"></script>
+</body>
+</html>
