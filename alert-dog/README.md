@@ -1,5 +1,29 @@
 # Alert Dog: a Cadence brain lives with a virtual patient
 
+## 快速启动
+
+```sh
+cd alert-dog
+.venv/bin/python server.py        # http://localhost:8672
+```
+
+第一次需要先装依赖（约半分钟；犬舍狗会在首次启动时训练或从 `brains/` 加载）：
+
+```sh
+cd alert-dog
+python3 -m venv .venv && .venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python server.py
+```
+
+终端会打出心跳（约每 2 秒）和事件行（提醒、吃饭、学习、页面干预）。正式测量与测试：
+
+```sh
+.venv/bin/python evaluate.py      # about 6 minutes on 8 cores
+.venv/bin/python -m pytest tests -q
+```
+
+---
+
 Some people with type 1 diabetes live with a trained alert dog that notices a coming low
 before they do. Here the dog is one continuing Cadence brain. It is trained in a kennel by
 a trainer, then placed with a virtual patient it has never met. Every five minutes it reads
@@ -13,14 +37,6 @@ The patient is the UVA/Padova 2008 model of type 1 diabetes, in the open-source
 demo with a virtual patient. It is not a medical device and gives no treatment advice.**
 
 Built with `cadence-net` 0.80.0.
-
-```sh
-cd alert-dog
-python3 -m venv .venv && .venv/bin/python -m pip install -r requirements.txt
-.venv/bin/python server.py        # http://localhost:8672
-.venv/bin/python evaluate.py      # the measurement below, about 6 minutes on 8 cores
-.venv/bin/python -m pytest tests -q
-```
 
 ## The page
 
