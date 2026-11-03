@@ -22,6 +22,8 @@ python3 -m venv .venv && .venv/bin/python -m pip install -r requirements.txt
 .venv/bin/python -m pytest tests -q
 ```
 
+原理与「在训练什么」见 [原理.md](原理.md)。
+
 ---
 
 Some people with type 1 diabetes live with a trained alert dog that notices a coming low
